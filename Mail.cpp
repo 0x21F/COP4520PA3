@@ -21,7 +21,7 @@ typedef struct l {
 
 OptNode* allocNode(int val);
 
-void runThisShit(OptNode head);
+void runThisShit();
 bool validate(OptNode *head, OptNode *pred, OptNode *curr);
 int pop(OptNode *head);
 bool add(OptNode *head, int val);
@@ -31,13 +31,13 @@ bool contains(OptNode *head, int val);
 int cards[NUM_CARDS];
 std::atomic<int> taken = 0;
 std::atomic<int> delivered =  0;
+OptNode head = {.val = -1, .next = NULL};
 
 int main () {
 	std::random_device rd;
 	std::mt19937 g(rd());
 	srand(time(0));
 	// don't have to worry about freeing this 
-	OptNode head = {.val = -1, .next = NULL};
 
 	for(int i=0; i < NUM_CARDS; ++i) {  
 		cards[i] = i;
@@ -47,7 +47,7 @@ int main () {
 
 	std::thread workers[NUM_THREADS];
 	for(int i=0; i < NUM_THREADS; ++i) { 
-		workers[i] = std::thread(runThisShit, head);
+		workers[i] = std::thread(runThisShit);
 	}
 
 	for(int i=0; i < NUM_THREADS; ++i) {  
@@ -60,7 +60,7 @@ int main () {
 	return 0;
 }
 
-void runThisShit(OptNode head) {
+void runThisShit() {
 	int sel;
 	while(delivered < NUM_CARDS) {
 		usleep(rand() % 200);
@@ -84,26 +84,26 @@ OptNode* allocNode(int val) {
 	return NULL;
 }
 
-int pop(OptNode *head) {
-	OptNode *curr = head->next;
+int pop(OptNode *h) {
+	OptNode *curr = h->next;
 
 	while(1) {
-		head->lock.lock();
+		h->lock.lock();
 		curr->lock.lock();
-		if(validate(head, head, curr)) {
+		if(validate(h, h, curr)) {
 			int val = curr->val;
-			head->next = curr->next;	
+			h->next = curr->next;	
 			free(curr);
 			return val;
 		}
 
-		head->lock.unlock();
+		h->lock.unlock();
 		curr->lock.unlock();
 	}
 }
 
-bool validate(OptNode* head, OptNode *pred, OptNode *curr){
-	OptNode *node = head; 
+bool validate(OptNode* h, OptNode *pred, OptNode *curr){
+	OptNode *node = h; 
 	while(node->val <= pred->val){
 		if(node == pred) {
 			return pred->next == curr;
@@ -113,11 +113,11 @@ bool validate(OptNode* head, OptNode *pred, OptNode *curr){
 	return false;
 }
 
-bool add(OptNode* head, int val) {
+bool add(OptNode* h, int val) {
 	bool ret = false;
 	while(1) {
-		OptNode *pred = head;
-		OptNode *curr = head->next; 
+		OptNode *pred = h;
+		OptNode *curr = h->next; 
 		while(curr->val < val) {
 			pred = curr;
 			curr = curr->next;
@@ -126,7 +126,7 @@ bool add(OptNode* head, int val) {
 		pred->lock.lock();
 		curr->lock.lock();
 
-		if(validate(head, pred, curr)) {
+		if(validate(h, pred, curr)) {
 			if(curr->val == val) {
 				ret = false;
 			}
@@ -149,11 +149,11 @@ bool add(OptNode* head, int val) {
 	}
 }
 
-bool remove(OptNode *head, int val){
+bool remove(OptNode *h, int val){
 	bool ret = false;
 	while(1) {
-		OptNode *pred = head;
-		OptNode *curr = head->next; 
+		OptNode *pred = h;
+		OptNode *curr = h->next; 
 		while(curr->val < val) {
 			pred = curr;
 			curr = curr->next;
@@ -162,7 +162,7 @@ bool remove(OptNode *head, int val){
 		pred->lock.lock();
 		curr->lock.lock();
 
-		if(validate(head, pred, curr)) {
+		if(validate(h, pred, curr)) {
 			if(curr->val == val) {
 				pred->next = curr->next;
 
@@ -189,11 +189,11 @@ bool remove(OptNode *head, int val){
 	}
 }
 	
-bool contains(OptNode *head,int val){
+bool contains(OptNode *h,int val){
 	bool ret = false;
 	while(1) {
-		OptNode *pred = head;
-		OptNode *curr = head->next; 
+		OptNode *pred = h;
+		OptNode *curr = h->next; 
 		while(curr->val < val) {
 			pred = curr;
 			curr = curr->next;
@@ -202,7 +202,7 @@ bool contains(OptNode *head,int val){
 		pred->lock.lock();
 		curr->lock.lock();
 
-		if(validate(head, pred, curr)) {
+		if(validate(h, pred, curr)) {
 			ret = (curr->val == val);
 			pred->lock.unlock();
 			curr->lock.unlock();
