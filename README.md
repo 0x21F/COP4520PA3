@@ -10,7 +10,10 @@ The rest is a standard Optimistic Linked List implementation in C++
 If you want to attempt to run this I'll make a makefile in the morning
 
 ## Program 2 
-DNE
-
-
-
+Doesn't quite work. Idea was to have a shared time variable only being incremented by the main thread. 
+The other threads would be synchronized to this thread, and store their temperatures accordingly. This
+program however does not store the recorded values on a minute by minute basis since the spec's 
+minimum required time for the calculations is 10 minutes. We can cut down on the search space y keeping
+two tables of temperatures, one for min and max temp, which allows us to compute the greatest temperature 
+difference during the 10 minute period, while reducing the search space for the 1 hr report for the 
+highest/lowest temperature by a magnitude of 10. 
