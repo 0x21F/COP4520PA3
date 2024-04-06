@@ -1,4 +1,6 @@
 #include <atomic>
+#include <cstdlib>
+#include <ctime>
 #include <iostream>
 
 #define NUM_THREADS 8
@@ -14,25 +16,35 @@ std::atomic<int> t = 0;
 void runner(int i);
 
 int main() { 
+	srand(time(0));
 	for(int i=0; i<NUM_MINUTES / 10; ++i) {
 		for(int j=0; j<NUM_THREADS; ++j) {
-
+			// just get them out the bounds allowed for temps
+			min[i][j] = 2147;
+			max[i][j] = -2147;
 		}
 	}
 
-	return 1;
+	std::cout << "just here so lsp stops complaining";
+
+	return 0;
 }
 
 void runner(int i) {
 	int local = t;
 	int slot = 0;
+	int rng = 0;
 	while(local <= NUM_MINUTES)  {
-		if(t != local +1) {
-			std::cout << "times don't match. Panicking\n";
-		}
 		local = t;
 		slot = local / 10;
+		rng = (rand() % 171) - 100;
 
+		if(rng < min[slot][i]) {
+			min[slot][i] = rng;
+		}
 
+		if(rng > max[slot][i]) {
+			max[slot][i] = rng;
+		}
 	}
 }
