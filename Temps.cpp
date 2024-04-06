@@ -1,17 +1,16 @@
-#include <atomic>
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
+#include <unistd.h>
+#include <thread>
 
 #define NUM_THREADS 8
 #define NUM_MINUTES 120
 
-
-
 // each thread gets their own slot
 int min[NUM_MINUTES / 10][NUM_THREADS];
 int max[NUM_MINUTES / 10][NUM_THREADS];
-std::atomic<int> t = 0;
+int t = 0;
 
 void runner(int i);
 
@@ -23,6 +22,31 @@ int main() {
 			min[i][j] = 2147;
 			max[i][j] = -2147;
 		}
+	}
+
+	std::thread sensors[NUM_THREADS];
+
+	for(int i=0;i < NUM_THREADS; ++i) {
+		sensors[i] = std::thread(runner, i);
+	}
+
+	while(t<NUM_MINUTES) {
+		usleep(200);
+		std::cout << "time is: " << ++t;
+
+		if(t % 10 == 0) {
+			int greatest_diff = 0; 
+			for(int i=0; i < NUM_THREADS; ++i) {
+				for(int j=0; j < NUM_THREADS; ++j) {
+					greatest_diff = (max[t/10][j], min[t/10][i])
+				}
+
+			}
+		}
+	}
+
+	for(int i=0;i < NUM_THREADS; ++i) {
+		sensors[i].join();
 	}
 
 	std::cout << "just here so lsp stops complaining";
