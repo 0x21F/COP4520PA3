@@ -1,3 +1,4 @@
 # don't stashe classes
 *.class
+*.out
 

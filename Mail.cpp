@@ -1,13 +1,17 @@
 #include <algorithm>
+#include <atomic>
 #include <cstdlib>
+#include <ctime>
 #include <iterator>
 #include <random>
+#include <stdatomic.h>
 #include <thread>
 #include <iostream>
 #include <mutex> 
 #include <unistd.h>
 
 #define NUM_CARDS 500000
+#define NUM_THREADS 8
 
 typedef struct l {
 	std::mutex lock;
@@ -17,17 +21,21 @@ typedef struct l {
 
 OptNode* allocNode(int val);
 
+void runThisShit(OptNode head);
 bool validate(OptNode *head, OptNode *pred, OptNode *curr);
-bool pop(OptNode *head);
+int pop(OptNode *head);
 bool add(OptNode *head, int val);
 bool remove(OptNode *head, int val);
 bool contains(OptNode *head, int val);
 
 int cards[NUM_CARDS];
+std::atomic<int> taken = 0;
+std::atomic<int> delivered =  0;
 
 int main () {
 	std::random_device rd;
 	std::mt19937 g(rd());
+	srand(time(0));
 	// don't have to worry about freeing this 
 	OptNode head = {.val = -1, .next = NULL};
 
@@ -37,31 +45,56 @@ int main () {
 
 	std::shuffle(std::begin(cards), std::end(cards), g);
 
+	std::thread workers[NUM_THREADS];
+	for(int i=0; i < NUM_THREADS; ++i) { 
+		workers[i] = std::thread(runThisShit, head);
+	}
 
-	std::cout << "no\n";
+	for(int i=0; i < NUM_THREADS; ++i) {  
+		workers[i].join();
+	}
+
+
+	std::cout << "report: " << delivered << " notes\n";
+
 	return 0;
 }
 
+void runThisShit(OptNode head) {
+	int sel;
+	while(delivered < NUM_CARDS) {
+		usleep(rand() % 200);
+		sel = cards[atomic_fetch_add(&taken, 1)];
+		std::cout << "receiving message " << sel << "\n";
+		add(&head, sel);
+		
+		usleep(rand() % 200);
+		sel = pop(&head);
+		std::cout << "sending message " << sel << "\n";
+		usleep(rand() % 200);
+	}
+}
+
+
 OptNode* allocNode(int val) {
 	OptNode* ret = (OptNode*)malloc(sizeof(OptNode));
-
 	if(ret) {
 		return ret;
 	}
-
 	return NULL;
 }
 
-bool pop(OptNode *head) {
+int pop(OptNode *head) {
 	OptNode *curr = head->next;
 
 	while(1) {
 		head->lock.lock();
 		curr->lock.lock();
 		if(validate(head, head, curr)) {
+			int val = curr->val;
 			head->next = curr->next;	
 			free(curr);
-			return true;
+			return val;
 		}
 
 		head->lock.unlock();
